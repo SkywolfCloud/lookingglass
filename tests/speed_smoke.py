@@ -9,6 +9,8 @@ import json
 import queue
 import socket
 import subprocess
+import sys
+from pathlib import Path
 import threading
 import time
 import urllib.error
@@ -177,22 +179,8 @@ try:
         print('external Speedtest.net download/upload/result PASS', flush=True)
 
     if args.iperf:
-        thread, result = background('als/method/iperf3/server', session.id)
-        port = int(session.wait('Iperf3'))
-        log = ''
-        while 'Server listening' not in log:
-            log += session.wait('Iperf3Stream')
-        completed = subprocess.run(['docker', 'exec', args.backend_container, 'iperf3', '-c', '127.0.0.1', '-p', str(port), '-t', '1', '-b', '5M', '-J'], capture_output=True, text=True, timeout=15)
-        assert completed.returncode == 0, (completed.stdout, completed.stderr)
-        output = json.loads(completed.stdout)
-        assert output['end']['sum_received']['bytes'] > 0
-        session.close()
-        thread.join(timeout=5)
-        assert not thread.is_alive(), 'iPerf server did not stop when its session disconnected'
-        with socket.socket() as probe:
-            probe.settimeout(1)
-            assert probe.connect_ex(('127.0.0.1', port)) != 0, 'iPerf port remains open'
-        print('iPerf3 rate-limited transfer and cancellation/port cleanup PASS', flush=True)
+        subprocess.run([sys.executable, str(Path(__file__).with_name('iperf_lifecycle.py')), base, '--backend-container', args.backend_container], check=True)
+
 finally:
     session.close()
 

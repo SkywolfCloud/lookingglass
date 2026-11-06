@@ -40,7 +40,6 @@
     let serverBuffer = '';
     let serverDone = false;
     let serverError = '';
-    let iperfController;
     let iperfTimer;
     let iperfPort = 0;
     let iperfTerminal;
@@ -106,7 +105,6 @@
         config = null;
         stopBrowser('Connection lost. Please retry when reconnected.');
         serverController?.abort();
-        iperfController?.abort();
         el('speed-connection').className = 'badge text-bg-secondary';
         text('speed-connection', 'Reconnecting…');
         refreshButtons();
@@ -279,9 +277,9 @@
             button.textContent = 'Copied'; setTimeout(() => { button.textContent = 'Copy'; }, 1500);
         } catch { button.textContent = 'Select text to copy'; }
     }
-    function iperfCommands(port) {
+    function iperfCommands(port, addresses = config) {
         const parent = el('iperf-commands'); parent.replaceChildren();
-        for (const [family, host] of [[4, config?.public_ipv4], [6, config?.public_ipv6]]) {
+        for (const [family, host] of [[4, addresses?.public_ipv4], [6, addresses?.public_ipv6]]) {
             if (!host || !/^[0-9a-f:.]+$/i.test(host)) continue;
             for (const reverse of [false, true]) {
                 const value = `iperf3 -${family} -c ${host} -p ${port} -t 10${reverse ? ' -R' : ''}`;
@@ -293,46 +291,74 @@
             }
         }
     }
-    source.addEventListener('Iperf3', event => {
-        if (active !== 'iperf') return;
-        iperfPort = Number(event.data);
-        if (!Number.isInteger(iperfPort) || iperfPort < 1024 || iperfPort > 65535) return;
-        iperfCommands(iperfPort);
-        let seconds = 60;
-        text('iperf-status', `Port ${iperfPort} · ${seconds}s remaining`);
-        clearInterval(iperfTimer);
-        iperfTimer = setInterval(() => text('iperf-status', `Port ${iperfPort} · ${Math.max(0, --seconds)}s remaining`), 1000);
+    let iperfJob = null;
+    let iperfPollBusy = false;
+    let iperfRenderedLog = '';
+    function renderIperfLog() {
+        const host = el('iperf-output');
+        if (!iperfJob || iperfJob.status === 'idle') return;
+        host.hidden = false;
+        if (host.clientWidth > 0 && !iperfTerminal && typeof Terminal !== 'undefined' && typeof FitAddon !== 'undefined') {
+            host.textContent = '';
+            iperfTerminal = new Terminal({disableStdin: true, convertEol: true, cursorInactiveStyle: 'none', fontSize: 14, theme: {background: '#0d1117', foreground: '#d0d0d0', cursor: '#0d1117'}});
+            iperfFit = new FitAddon.FitAddon(); iperfTerminal.loadAddon(iperfFit); iperfTerminal.open(host);
+            iperfResize = new ResizeObserver(() => { if (host.clientWidth > 0) iperfFit.fit(); }); iperfResize.observe(host);
+            iperfRenderedLog = '';
+        }
+        const log = iperfJob.log || '';
+        if (iperfTerminal) {
+            if (!log.startsWith(iperfRenderedLog)) { iperfTerminal.reset(); iperfRenderedLog = ''; }
+            iperfTerminal.write(log.slice(iperfRenderedLog.length));
+            iperfRenderedLog = log;
+        } else host.textContent = log;
+    }
+    function showIperfJob(job) {
+        const running = ['starting', 'running'].includes(job.status);
+        if (iperfJob?.id !== job.id) { iperfTerminal?.reset(); iperfRenderedLog = ''; }
+        iperfJob = job;
+        if (running) active = 'iperf';
+        else if (active === 'iperf') active = null;
+        if (job.port && job.port !== iperfPort) { iperfPort = job.port; iperfCommands(job.port, job); }
+        text('iperf-status', job.status === 'running' ? `Port ${job.port} · ${job.remaining}s remaining` : job.message || 'Not running.');
+        renderIperfLog(); refreshButtons();
+    }
+    async function iperfRequest(action) {
+        const options = {cache: 'no-store'};
+        if (action) {
+            options.method = 'POST';
+            options.headers = {'Content-Type': 'application/json', 'X-CSRF-Token': root.dataset.iperfCsrf};
+            options.body = JSON.stringify({action});
+        }
+        const response = await fetch(url('iperf.php'), options);
+        const job = await response.json();
+        if (!response.ok) throw new Error(job.error || 'iPerf3 request failed.');
+        return job;
+    }
+    async function pollIperfJob() {
+        if (iperfPollBusy) return;
+        iperfPollBusy = true;
+        try { showIperfJob(await iperfRequest()); }
+        catch { if (active === 'iperf') text('iperf-status', 'Reconnecting to server status…'); }
+        finally { iperfPollBusy = false; }
+    }
+    el('iperf-stop').addEventListener('click', async () => {
+        text('iperf-status', 'Stopping server…');
+        try { await iperfRequest('stop'); await pollIperfJob(); }
+        catch (error) { text('iperf-status', error.message); }
     });
-    source.addEventListener('Iperf3Stream', event => {
-        if (active !== 'iperf') return;
-        if (iperfTerminal) iperfTerminal.write(event.data);
-        else el('iperf-output').textContent += event.data;
-    });
-    el('iperf-stop').addEventListener('click', () => iperfController?.abort());
-    el('speed-tab-iperf').addEventListener('shown.bs.tab', () => iperfFit?.fit());
+    el('speed-tab-iperf').addEventListener('shown.bs.tab', () => { pollIperfJob(); renderIperfLog(); if (el('iperf-output').clientWidth > 0) iperfFit?.fit(); });
     el('iperf-start').addEventListener('click', async () => {
         if (active || !sessionId || !config) return;
-        active = 'iperf'; iperfPort = 0; iperfController = new AbortController(); refreshButtons();
+        active = 'iperf'; iperfPort = 0; refreshButtons();
         el('iperf-commands').replaceChildren(); text('iperf-status', 'Starting server…');
-        const host = el('iperf-output'); host.hidden = false;
-        if (typeof Terminal !== 'undefined' && typeof FitAddon !== 'undefined') {
-            if (!iperfTerminal) {
-                iperfTerminal = new Terminal({disableStdin: true, convertEol: true, cursorInactiveStyle: 'none', fontSize: 14, theme: {background: '#0d1117', foreground: '#d0d0d0', cursor: '#0d1117'}});
-                iperfFit = new FitAddon.FitAddon(); iperfTerminal.loadAddon(iperfFit); iperfTerminal.open(host);
-                iperfResize = new ResizeObserver(() => { if (host.clientWidth > 0) iperfFit.fit(); }); iperfResize.observe(host);
-            }
-            iperfTerminal.reset(); iperfFit.fit();
-        } else host.textContent = '';
-        const timeout = setTimeout(() => iperfController?.abort(), 70000);
-        try {
-            const response = await fetch(url('als/method/iperf3/server'), {headers: {session: sessionId}, signal: iperfController.signal});
-            if (!response.ok || !(await response.json()).success) throw new Error('request');
-            text('iperf-status', 'Server stopped.');
-        } catch (error) { text('iperf-status', error.name === 'AbortError' ? 'Server stopped.' : 'Unable to start iPerf3. Please retry.'); }
-        finally { clearTimeout(timeout); clearInterval(iperfTimer); active = null; iperfController = null; refreshButtons(); }
+        try { showIperfJob(await iperfRequest('start')); await pollIperfJob(); }
+        catch (error) { active = null; text('iperf-status', error.message); refreshButtons(); }
     });
+    iperfTimer = setInterval(() => { if (active === 'iperf' && !document.hidden) pollIperfJob(); }, 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) pollIperfJob(); });
+    pollIperfJob();
     window.addEventListener('beforeunload', () => {
-        source.close(); worker?.terminate(); serverController?.abort(); iperfController?.abort();
+        source.close(); worker?.terminate(); serverController?.abort();
         clearInterval(workerTimer); clearTimeout(browserDeadline); clearInterval(iperfTimer); iperfResize?.disconnect(); iperfTerminal?.dispose();
     }, {once: true});
     refreshButtons();

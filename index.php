@@ -379,7 +379,7 @@ $templateData['csrfToken'] = $_SESSION[LookingGlass::SESSION_CSRF] = bin2hex(ran
 
 <?php if (LG_BLOCK_SPEEDTEST): ?>
 <link rel="stylesheet" href="brand/speedtest.css?v=1">
-<script src="brand/speedtest.js?v=2"></script>
+<script src="brand/speedtest.js?v=3"></script>
 <?php endif ?>
 </body>
 </html>

@@ -5,6 +5,8 @@ services:
       - ./tests/.runtime/nginx.conf:/etc/nginx/nginx.conf:ro
   php-fpm:
     container_name: lg-php-stage
+    environment:
+      SPEED_BACKEND_PORT: '19081'
     volumes:
       - ./tests/.runtime/php.conf:/usr/local/etc/php-fpm.d/zz-lg.conf:ro
     healthcheck:

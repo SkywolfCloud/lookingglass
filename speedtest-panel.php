@@ -1,5 +1,7 @@
-<?php declare(strict_types=1); ?>
-<section id="speed-suite" aria-label="Speed tests">
+<?php declare(strict_types=1);
+$_SESSION['iperf_csrf'] ??= bin2hex(random_bytes(24));
+?>
+<section id="speed-suite" aria-label="Speed tests" data-iperf-csrf="<?= htmlspecialchars($_SESSION['iperf_csrf'], ENT_QUOTES, 'UTF-8') ?>">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <p class="text-muted mb-0">Measure your connection to this node, or test the node's own network.</p>
         <span class="badge text-bg-secondary" id="speed-connection" role="status">Connecting…</span>
@@ -56,7 +58,7 @@
             <a id="server-result" class="btn btn-outline-success" target="_blank" rel="noopener noreferrer" hidden>View Speedtest.net result</a>
         </div>
         <div class="tab-pane fade" id="speed-iperf" role="tabpanel" aria-labelledby="speed-tab-iperf">
-            <p class="text-muted">Start an iPerf3 server, then run one of the commands below on your own device. It stops automatically after 60 seconds.</p>
+            <p class="text-muted">Start an iPerf3 server, then run one of the commands below on your own device. It stays running when you switch apps or disconnect this page, and stops automatically after 60 seconds.</p>
             <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
                 <button class="btn btn-primary" id="iperf-start" type="button" disabled>Start iPerf3 server</button>
                 <button class="btn btn-outline-danger" id="iperf-stop" type="button" hidden>Stop server</button>
