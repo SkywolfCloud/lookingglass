@@ -15,15 +15,9 @@ window.renderLookingGlassTerminal = async function ({outputCard, outputContent, 
             host.setAttribute('aria-label', 'Network test output, read-only');
             outputContent.before(host);
             outputContent.hidden = true;
-            const darkColors = ['#adb5bd','#ff8787','#75d69c','#ffe083','#86b7fe','#e599f7','#6edff6','#dee2e6','#adb5bd','#ffa8a8','#8ce99a','#ffec99','#a5c8ff','#eebefa','#99e9f2','#f8f9fa'];
-            const names = ['black','red','green','yellow','blue','magenta','cyan','white','brightBlack','brightRed','brightGreen','brightYellow','brightBlue','brightMagenta','brightCyan','brightWhite'];
-            const getTheme = () => {
-                const theme = {background: '#0d1117',foreground: '#dee2e6',cursor: '#0d1117',selectionBackground: '#426188'};
-                names.forEach((name, i) => theme[name] = darkColors[i]);
-                host.style.backgroundColor = theme.background;
-                return theme;
-            };
-            terminal = new Terminal({disableStdin: true,convertEol: true,cursorBlink: false,cursorInactiveStyle: 'none',fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',fontSize: 14,lineHeight: 1.2,scrollback: 3000,minimumContrastRatio: 4.5,theme: getTheme()});
+            const theme = {background: '#0d1117', foreground: '#d0d0d0', cursor: '#0d1117', selectionBackground: '#334155'};
+            host.style.backgroundColor = theme.background;
+            terminal = new Terminal({disableStdin: true,convertEol: true,cursorBlink: false,cursorInactiveStyle: 'none',fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',fontSize: 14,lineHeight: 1.2,scrollback: 3000,theme});
             const fit = new FitAddon.FitAddon();
             terminal.loadAddon(fit);
             terminal.open(host);

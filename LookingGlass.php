@@ -330,10 +330,10 @@ class LookingGlass
     {
         $cmd = ['timeout', '--signal=TERM', '--kill-after=3s', '45s',
             '/usr/local/bin/nexttrace', '--traceroute', $ipv6 ? '-6' : '-4',
-            '--classic', '--language', 'en', '-M',
+            '--language', 'en', '-M',
             '--max-hops', '30', '--queries', '2', '--timeout', '1000', $host];
         $process = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'],
-            2 => ['redirect', 1]], $pipes, '/tmp');
+            2 => ['redirect', 1]], $pipes, '/tmp', array_merge(getenv(), ['TERM' => 'xterm-256color', 'COLORTERM' => 'truecolor']));
         if (!is_resource($process)) {
             echo 'Could not start NextTrace.';
             return false;

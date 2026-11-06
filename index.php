@@ -344,7 +344,7 @@ $templateData['csrfToken'] = $_SESSION[LookingGlass::SESSION_CSRF] = bin2hex(ran
 <link rel="stylesheet" href="brand/terminal.css?v=2">
 <script src="brand/vendor/xterm.js?v=6.0.0"></script>
 <script src="brand/vendor/addon-fit.js?v=0.11.0"></script>
-<script src="brand/terminal.js?v=2"></script>
+<script src="brand/terminal.js?v=3"></script>
 <script>
     window.renderLookingGlassTerminal({
         outputContent: document.getElementById('outputContent'),

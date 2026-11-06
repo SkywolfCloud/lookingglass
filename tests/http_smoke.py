@@ -40,6 +40,8 @@ def run(method):
     elif method.startswith('nexttrace'):
         assert 'IP Geo Data Provider:' in out and '\x1b[' in out and target in out, (method, out)
         assert 'could not complete' not in out, out
+        codes = {int(code) for seq in re.findall(r'\x1b\[([0-9;]+)m', out) for code in seq.split(';')}
+        assert {92, 93, 96} <= codes, ('missing native ASN / hop / latency colors', codes)
     else:
         assert 'traceroute to' in out and target in out, (method, out)
     assert not client.open(base + 'backend.php', timeout=15).read().strip(), 'backend token replay'
