@@ -1,0 +1,10 @@
+.lg-terminal {
+    height: clamp(280px, 55vh, 560px);
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.lg-terminal .xterm { height: 100%; }
+
+.lg-terminal { background: #0d1117; }

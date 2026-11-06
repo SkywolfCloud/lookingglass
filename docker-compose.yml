@@ -1,6 +1,6 @@
 services:
   nginx:
-    image: hybula/lookingglass-nginx:1
+    image: skywolfcloud/lookingglass-nginx:local
     container_name: lg-nginx
     build:
       context: .
@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
 
   php-fpm:
-    image: hybula/lookingglass-php:1
+    image: skywolfcloud/lookingglass-php:local
     container_name: lg-php
     build:
       context: .
@@ -43,7 +43,7 @@ services:
       # Uncomment if you require visitors to accept the Terms of Use; the value should be a link to the terms.
       # LG_TERMS: http://localhost/
       # Comma-separated list of enabled methods (default: all methods enabled).
-      # METHODS: ping,ping6,mtr,mtr6,traceroute,traceroute6
+      # METHODS: ping,ping6,mtr,mtr6,traceroute,traceroute6,nexttrace,nexttrace6
       # Comma-separated "Label|URL" pairs for other looking glass locations (default: none).
       # LOCATIONS: "Amsterdam|https://ams.lg.example.com,Frankfurt|https://fra.lg.example.com"
       # Comma-separated "Label|URL" pairs for speedtest files (default: none).

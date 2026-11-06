@@ -2,7 +2,7 @@
 use Hybula\LookingGlass;
 
 // Define the HTML title;
-const LG_TITLE = 'Looking Glass';
+const LG_TITLE = 'Skywolf Cloud HK Looking Glass';
 
 // Define a logo, this can be HTML too, see the other example for an image;
 define('LG_LOGO', getenv('LOGO'));
@@ -80,7 +80,7 @@ function parseEnvMap(string $envVar, array $default = []): array {
 }
 
 // Define the methods that can be used by visitors to test it out.
-// Set METHODS env var to a comma-separated list, e.g.: "ping,ping6,mtr,mtr6,traceroute,traceroute6"
+// Set METHODS env var to a comma-separated list, e.g.: "ping,ping6,mtr,mtr6,traceroute,traceroute6,nexttrace,nexttrace6"
 define('LG_METHODS', parseEnvList('METHODS', [
     LookingGlass::METHOD_PING,
     LookingGlass::METHOD_PING6,
@@ -88,6 +88,8 @@ define('LG_METHODS', parseEnvList('METHODS', [
     LookingGlass::METHOD_MTR6,
     LookingGlass::METHOD_TRACEROUTE,
     LookingGlass::METHOD_TRACEROUTE6,
+    LookingGlass::METHOD_NEXTTRACE,
+    LookingGlass::METHOD_NEXTTRACE6,
 ]));
 
 // Define other looking glasses, this is useful if you have multiple networks and looking glasses.

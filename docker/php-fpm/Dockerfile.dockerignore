@@ -1,3 +1,5 @@
-docker/php-fpm/Dockerfile
-docker/php-fpm/Dockerfile.dockerignore
 .git
+config.php
+compose.override.yaml
+tests
+.github

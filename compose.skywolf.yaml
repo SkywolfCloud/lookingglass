@@ -1,0 +1,16 @@
+services:
+  php-fpm:
+    volumes:
+      - ./docker/php-fpm/zz-lg.conf:/usr/local/etc/php-fpm.d/zz-lg.conf:ro
+    environment:
+      LOCATION: 'Hong Kong'
+      FACILITY: 'Skywolf Technology LLC (AS7720)'
+      FACILITY_URL: 'https://www.peeringdb.com/asn/7720'
+      LOGO_URL: 'https://hk.skywolf.cloud/'
+      LOGO: '<img src="/brand/skywolf-logo.png" alt="Skywolf Cloud HK" style="width:219px;max-width:100%;height:auto;background:#fff;padding:8px;border-radius:6px">'
+      LOGO_DARK: '<img src="/brand/skywolf-logo.png" alt="Skywolf Cloud HK" style="width:219px;max-width:100%;height:auto;background:#fff;padding:8px;border-radius:6px">'
+      IPV4_ADDRESS: '103.213.4.13'
+      IPV6_ADDRESS: '2401:5a0:1000:d::a'
+      MAPS_QUERY: 'Hong Kong'
+      DISABLE_BLOCK_SPEEDTEST: 'true'
+      METHODS: 'ping,ping6,mtr,mtr6,traceroute,traceroute6,nexttrace,nexttrace6'

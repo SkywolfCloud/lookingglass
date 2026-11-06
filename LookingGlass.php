@@ -33,6 +33,8 @@ class LookingGlass
     public const METHOD_MTR6 = 'mtr6';
     public const METHOD_TRACEROUTE = 'traceroute';
     public const METHOD_TRACEROUTE6 = 'traceroute6';
+    public const METHOD_NEXTTRACE = 'nexttrace';
+    public const METHOD_NEXTTRACE6 = 'nexttrace6';
 
     private const MTR_COUNT = 10;
 
@@ -141,7 +143,7 @@ class LookingGlass
         session_name('HYLOOKINGLASS');
         @session_start([
             'cookie_httponly' => true,
-            'cookie_secure'   => true,
+            'cookie_secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
             'cookie_samesite' => 'Strict',
         ]) or die('Could not start session!');
     }
@@ -323,6 +325,48 @@ class LookingGlass
         return self::procExecute(['traceroute', '-6', '-w2'], $host, $failCount);
     }
 
+    /** Run a bounded NextTrace with native ANSI output for the read-only terminal. */
+    public static function nexttrace(string $host, bool $ipv6 = false): bool
+    {
+        $cmd = ['timeout', '--signal=TERM', '--kill-after=3s', '45s',
+            '/usr/local/bin/nexttrace', '--traceroute', $ipv6 ? '-6' : '-4',
+            '--classic', '--language', 'en', '-M',
+            '--max-hops', '30', '--queries', '2', '--timeout', '1000', $host];
+        $process = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'],
+            2 => ['redirect', 1]], $pipes, '/tmp');
+        if (!is_resource($process)) {
+            echo 'Could not start NextTrace.';
+            return false;
+        }
+        fclose($pipes[0]);
+        $preamble = '';
+        $traceStarted = false;
+        while (($line = fgets($pipes[1])) !== false) {
+            if (!$traceStarted) {
+                if (strpos($line, 'IP Geo Data Provider:') === false) {
+                    $preamble .= $line;
+                    continue;
+                }
+                $traceStarted = true;
+                echo "NextTrace v1.7.5\n";
+            }
+            echo $line;
+            if (ob_get_level() > 0) { @ob_flush(); }
+            flush();
+        }
+        fclose($pipes[1]);
+        $status = proc_close($process);
+        if (!$traceStarted) {
+            echo $preamble;
+        }
+        if ($status === 124 || $status === 137) {
+            echo "\nNextTrace stopped after the 45-second time limit.\n";
+        } elseif ($status !== 0) {
+            echo "\nNextTrace could not complete this trace.\n";
+        }
+        return $status === 0;
+    }
+
     /**
      * Executes a command and opens pipe for input/output.
      * Directly taken from telephone/LookingGlass (MIT License)
@@ -336,124 +380,51 @@ class LookingGlass
      */
     private static function procExecute(array $cmd, string $host, int $failCount = 2): bool
     {
-        // define output pipes
-        $spec = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w']
-        ];
-
-        // sanitize + remove single quotes
-        $cmd[] = str_replace('\'', '', filter_var($host, FILTER_SANITIZE_URL));
-
-        // execute command
-        $process = proc_open($cmd, $spec, $pipes, null);
-
-        // check pipe exists
+        $type = $cmd[0];
+        $family = in_array('-6', $cmd, true) ? self::IPV6 : self::IPV4;
+        $parser = $type === 'mtr' ? new Parser($host, $family) : null;
+        $cmd[] = $host;
+        $cmd = array_merge(['timeout', '--signal=TERM', '--kill-after=3s', '60s'], $cmd);
+        $process = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'],
+            2 => ['redirect', 1]], $pipes);
         if (!is_resource($process)) {
+            echo "Could not start network command.\n";
             return false;
         }
-
-        $family = self::IPV4;
-        if (in_array('-6', $cmd)) {
-            $family = self::IPV6;
-        }
-
-        // check for mtr/traceroute
-        if ($cmd[0] == 'mtr') {
-            $type = 'mtr';
-            $parser = new Parser($host, $family);
-        } elseif ($cmd[0] == 'traceroute') {
-            $type = 'traceroute';
-        } else {
-            $type = '';
-        }
-
-        $fail = 0;
-        $match = 0;
-        $traceCount = 0;
-        $lastFail = 'start';
-        // iterate stdout
-        while (($str = fgets($pipes[1], 4096)) != null) {
-            // check for output buffer
-            if (ob_get_level() == 0) {
-                ob_start();
-            }
-
-            // fix RDNS XSS (outputs non-breakble space correctly)
-            $str = htmlspecialchars(trim($str));
-
-            // correct output for mtr
-            if ($type === 'mtr') {
-                // correct output for mtr
-                $parser->update($str);
-                echo '@@@'.PHP_EOL.$parser->__toString().PHP_EOL.str_pad('', 4096).PHP_EOL;
-
-                // flush output buffering
-                @ob_flush();
-                flush();
-                continue;
-            } // correct output for traceroute
-            elseif ($type === 'traceroute') {
-                if ($match < 10 && preg_match('/^[0-9] /', $str, $string)) {
-                    $str = preg_replace('/^[0-9] /', '&nbsp;'.$string[0], $str);
-                    $match++;
+        fclose($pipes[0]);
+        $failedHops = 0;
+        $stopped = false;
+        while (($line = fgets($pipes[1], 4096)) !== false) {
+            if ($parser !== null) {
+                $parser->update(rtrim($line));
+                echo "\033[2J\033[H".$parser;
+            } else {
+                echo $line;
+                if ($type === 'traceroute' && preg_match('/^\s*\d+\s+\* \* \*/', $line)) {
+                    $failedHops++;
+                } else {
+                    $failedHops = 0;
                 }
-                // check for consecutive failed hops
-                if (strpos($str, '* * *') !== false) {
-                    $fail++;
-                    if ($lastFail !== 'start'
-                        && ($traceCount - 1) === $lastFail
-                        && $fail >= $failCount
-                    ) {
-                        echo str_pad($str.'<br />-- Traceroute timed out --<br />', 4096, ' ', STR_PAD_RIGHT);
-                        break;
-                    }
-                    $lastFail = $traceCount;
+                if ($type === 'traceroute' && $failedHops >= $failCount) {
+                    echo "-- Traceroute stopped after consecutive unresponsive hops --\n";
+                    $stopped = true;
                 }
-                $traceCount++;
             }
-
-            // pad string for live output
-            echo str_pad($str.'<br />', 4096, ' ', STR_PAD_RIGHT);
-
-            // flush output buffering
-            @ob_flush();
+            if (ob_get_level() > 0) { @ob_flush(); }
             flush();
-        }
-
-        // iterate stderr
-        while (($err = fgets($pipes[2], 4096)) != null) {
-            // check for IPv6 hostname passed to IPv4 command, and vice versa
-            if (strpos($err, 'Name or service not known') !== false || strpos($err, 'unknown host') !== false) {
-                echo 'Unauthorized request';
+            if ($stopped || connection_aborted()) {
+                proc_terminate($process);
                 break;
             }
         }
-
-        $status = proc_get_status($process);
-        if ($status['running']) {
-            // close pipes that are still open
-            foreach ($pipes as $pipe) {
-                fclose($pipe);
-            }
-            if ($status['pid']) {
-                // use ps to get all the children of this process
-                $psOutput = shell_exec('ps -o pid= --no-heading --ppid ' . (int)$status['pid']);
-                if ($psOutput !== null) {
-                    // Split the output into lines and filter numeric PIDs
-                    $pids = preg_split('/\s+/', trim($psOutput));
-
-                    foreach ($pids as $pid) {
-                        if (is_numeric($pid)) {
-                            posix_kill((int)$pid, 9);
-                        }
-                    }
-                }
-            }
-            proc_close($process);
+        fclose($pipes[1]);
+        $status = proc_close($process);
+        if ($status === 124 || $status === 137) {
+            echo "\nCommand stopped after the 60-second time limit.\n";
+        } elseif ($status !== 0 && !$stopped) {
+            echo "\nCommand exited with status ".$status.".\n";
         }
-        return true;
+        return $stopped || $status === 0;
     }
 
     public static function getLatency(): float
@@ -730,7 +701,7 @@ class Parser
             }
         }
 
-        return sprintf("&nbsp;Host%sLoss%%   Snt   Last   Avg  Best  Wrst StDev\n%s",
+        return sprintf(" Host%sLoss%%   Snt   Last   Avg  Best  Wrst StDev\n%s",
             str_pad('', $this->outputWidth + 1, ' ', STR_PAD_RIGHT), $str);
         // +1 above ($this->outputWidth + 1) is to account for the space between $asn and $hostAndIp.
     }

@@ -37,7 +37,7 @@ if (!empty($_POST)) {
         exitErrorMessage('You must agree with the Terms of Service.');
     }
 
-    if (in_array($_POST['backendMethod'], ['ping', 'mtr', 'traceroute'])) {
+    if (in_array($_POST['backendMethod'], ['ping', 'mtr', 'traceroute', 'nexttrace'])) {
         if (!LookingGlass::isValidIpv4($_POST['targetHost']) &&
             !$targetHost = LookingGlass::isValidHost($_POST['targetHost'], LookingGlass::IPV4)
         ) {
@@ -45,7 +45,7 @@ if (!empty($_POST)) {
         }
     }
 
-    if (in_array($_POST['backendMethod'], ['ping6', 'mtr6', 'traceroute6'])) {
+    if (in_array($_POST['backendMethod'], ['ping6', 'mtr6', 'traceroute6', 'nexttrace6'])) {
         if (!LookingGlass::isValidIpv6($_POST['targetHost']) &&
             !$targetHost = LookingGlass::isValidHost($_POST['targetHost'],LookingGlass::IPV6)
         ) {
@@ -109,6 +109,7 @@ $templateData['csrfToken'] = $_SESSION[LookingGlass::SESSION_CSRF] = bin2hex(ran
     <title><?php echo $templateData['title'] ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <style>
+
     .main-container {
         width: 100%;
     }
@@ -231,7 +232,7 @@ $templateData['csrfToken'] = $_SESSION[LookingGlass::SESSION_CSRF] = bin2hex(ran
                                     <label class="input-group-text">Method</label>
                                     <select class="form-select" name="backendMethod" id="backendMethod">
                                         <?php foreach ($templateData['methods'] as $method): ?>
-                                            <option value="<?php echo $method ?>"<?php if($templateData['session_method'] === $method): ?> selected<?php endif ?>><?php echo $method ?></option>
+                                            <option value="<?php echo $method ?>"<?php if($templateData['session_method'] === $method): ?> selected<?php endif ?>><?php echo ['nexttrace' => 'NextTrace (IPv4)', 'nexttrace6' => 'NextTrace (IPv6)'][$method] ?? $method ?></option>
                                         <?php endforeach ?>
                                     </select>
                                 </div>
@@ -339,55 +340,17 @@ $templateData['csrfToken'] = $_SESSION[LookingGlass::SESSION_CSRF] = bin2hex(ran
 <?php echo isset($templateData['custom_footer']) ? $templateData['custom_footer'] : '' ?>
 
 <?php if ($templateData['session_call_backend']): ?>
-<script type="text/javascript">
-    (function () {
-        const outputContent = document.getElementById('outputContent')
-        const executeButton = document.getElementById('executeButton')
-        const outputCard = document.getElementById('outputCard')
-
-        executeButton.innerText = 'Executing...'
-        executeButton.disabled = true
-
-        outputCard.classList.toggle('d-none')
-
-        fetch('backend.php')
-            .then(async (response) => {
-                // response.body is a ReadableStream
-                const reader = response.body.getReader()
-                const decoder = new TextDecoder()
-
-                for await (const chunk of readChunks(reader)) {
-                    const text = decoder.decode(chunk)
-                    <?php if(in_array($_SESSION[LookingGlass::SESSION_TARGET_METHOD], [LookingGlass::METHOD_MTR, LookingGlass::METHOD_MTR6])): ?>
-                    let splittedText = text.split('@@@')
-                    if (!splittedText[1]) {
-                        continue
-                    }
-                    outputContent.innerHTML = splittedText[1].trim()
-                    <?php else: ?>
-                    outputContent.innerHTML = outputContent.innerHTML + text.trim().replace(/<br \/> +/g, '<br />')
-                    <?php endif ?>
-                }
-            })
-            .finally(() => {
-                executeButton.innerText = 'Execute'
-                executeButton.disabled = false
-                console.log('Backend ready!')
-            })
-    })()
-
-    // readChunks() reads from the provided reader and yields the results into an async iterable
-    function readChunks(reader) {
-        return {
-            async* [Symbol.asyncIterator]() {
-                let readResult = await reader.read()
-                while (!readResult.done) {
-                    yield readResult.value
-                    readResult = await reader.read()
-                }
-            },
-        }
-    }
+<link rel="stylesheet" href="brand/vendor/xterm.css?v=6.0.0">
+<link rel="stylesheet" href="brand/terminal.css?v=2">
+<script src="brand/vendor/xterm.js?v=6.0.0"></script>
+<script src="brand/vendor/addon-fit.js?v=0.11.0"></script>
+<script src="brand/terminal.js?v=2"></script>
+<script>
+    window.renderLookingGlassTerminal({
+        outputContent: document.getElementById('outputContent'),
+        outputCard: document.getElementById('outputCard'),
+        executeButton: document.getElementById('executeButton')
+    });
 </script>
 <?php endif ?>
 

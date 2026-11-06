@@ -60,6 +60,8 @@ const LG_METHODS = [
     LookingGlass::METHOD_MTR6,
     LookingGlass::METHOD_TRACEROUTE,
     LookingGlass::METHOD_TRACEROUTE6,
+    LookingGlass::METHOD_NEXTTRACE,
+    LookingGlass::METHOD_NEXTTRACE6,
 ];
 
 // Define other looking glasses, this is useful if you have multiple networks and looking glasses;

@@ -20,6 +20,8 @@ LookingGlass::validateConfig();
 LookingGlass::startSession();
 
 header('X-Accel-Buffering: no');
+header('Content-Type: text/plain; charset=UTF-8');
+header('X-Content-Type-Options: nosniff');
 
 if (isset($_SESSION[LookingGlass::SESSION_TARGET_HOST]) &&
     isset($_SESSION[LookingGlass::SESSION_TARGET_METHOD]) &&
@@ -29,6 +31,12 @@ if (isset($_SESSION[LookingGlass::SESSION_TARGET_HOST]) &&
 
 
     switch ($_SESSION[LookingGlass::SESSION_TARGET_METHOD]) {
+        case LookingGlass::METHOD_NEXTTRACE:
+            LookingGlass::nexttrace($_SESSION[LookingGlass::SESSION_TARGET_HOST]);
+            break;
+        case LookingGlass::METHOD_NEXTTRACE6:
+            LookingGlass::nexttrace($_SESSION[LookingGlass::SESSION_TARGET_HOST], true);
+            break;
         case LookingGlass::METHOD_PING:
             LookingGlass::ping($_SESSION[LookingGlass::SESSION_TARGET_HOST]);
             break;
