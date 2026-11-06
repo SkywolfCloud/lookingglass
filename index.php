@@ -269,7 +269,12 @@ $templateData['csrfToken'] = $_SESSION[LookingGlass::SESSION_CSRF] = bin2hex(ran
         <div class="row pb-5">
             <div class="card shadow-lg">
                 <div class="card-body p-3">
-                    <h1 class="fs-4 card-title mb-4">Speedtest</h1>
+                    <h1 class="fs-4 card-title mb-4">Speed tests</h1>
+                    <?php require __DIR__.'/speedtest-panel.php'; ?>
+
+                    <?php if ($templateData['speedtest_iperf'] || count($templateData['speedtest_files'])): ?>
+                    <hr class="my-4">
+                    <h2 class="fs-6">Other test endpoints</h2>
 
                     <?php if ($templateData['speedtest_iperf']): ?>
                     <div class="row mb-3">
@@ -295,6 +300,7 @@ $templateData['csrfToken'] = $_SESSION[LookingGlass::SESSION_CSRF] = bin2hex(ran
                             <?php endforeach ?>
                         </div>
                     </div>
+                    <?php endif ?>
                     <?php endif ?>
 
                 </div>
@@ -339,12 +345,14 @@ $templateData['csrfToken'] = $_SESSION[LookingGlass::SESSION_CSRF] = bin2hex(ran
 
 <?php echo isset($templateData['custom_footer']) ? $templateData['custom_footer'] : '' ?>
 
-<?php if ($templateData['session_call_backend']): ?>
+<?php if ($templateData['session_call_backend'] || LG_BLOCK_SPEEDTEST): ?>
 <link rel="stylesheet" href="brand/vendor/xterm.css?v=6.0.0">
 <link rel="stylesheet" href="brand/terminal.css?v=2">
 <script src="brand/vendor/xterm.js?v=6.0.0"></script>
 <script src="brand/vendor/addon-fit.js?v=0.11.0"></script>
 <script src="brand/terminal.js?v=3"></script>
+<?php endif ?>
+<?php if ($templateData['session_call_backend']): ?>
 <script>
     window.renderLookingGlassTerminal({
         outputContent: document.getElementById('outputContent'),
@@ -369,5 +377,9 @@ $templateData['csrfToken'] = $_SESSION[LookingGlass::SESSION_CSRF] = bin2hex(ran
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 
+<?php if (LG_BLOCK_SPEEDTEST): ?>
+<link rel="stylesheet" href="brand/speedtest.css?v=1">
+<script src="brand/speedtest.js?v=2"></script>
+<?php endif ?>
 </body>
 </html>

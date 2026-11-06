@@ -3,3 +3,4 @@
 !php-fpm/src/config.php
 /compose.override.yaml
 /docker/php-fpm/bin/
+/tests/.runtime/

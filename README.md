@@ -13,6 +13,8 @@ made user-friendly for everyone to use. It allows you to execute network related
 - Supports ping/ping6, traceroute/traceroute6, mtr/mtr6 and nexttrace/nexttrace6.
 - A fixed dark xterm.js terminal for every method, with native ANSI colors, text selection and responsive sizing.
 - MTR updates its table in place; all terminal assets are served locally.
+- ALS-powered browser download/upload tests with latency and jitter, generated test files, and live interface traffic.
+- Server-side Speedtest.net results and 60-second on-demand iPerf3 servers, integrated into the LG interface.
 - SHA256-verified NextTrace v1.7.5 Docker builds for Linux amd64 and arm64.
 - Easy to customize and to configure.
 - DNS checking to prevent unnecessary executions.
@@ -27,7 +29,7 @@ made user-friendly for everyone to use. It allows you to execute network related
 
 ## Installation
 
-The Docker build includes NextTrace and all terminal assets. See [deployment and validation](DEPLOYMENT.md) for the Skywolf configuration, runtime limits and tests.
+The Docker deployment includes NextTrace, all terminal assets, and a pinned ALS speed-test service. Manual installations can use the diagnostics alone by disabling LG_BLOCK_SPEEDTEST, or also run the ALS service and configure the same /als/ proxy routes as the supplied nginx configuration. See [deployment and validation](DEPLOYMENT.md) for the Skywolf configuration, runtime limits and tests.
 #### Manual
 For this installation we will assume that we are working on AlmaLinux 8 or 9. Warning: This guide does not cover any security hardening or rate limiting.
 Note: These steps also work with AlmaLinux 9, but it will install PHP 8 instead of 7.

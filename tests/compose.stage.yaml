@@ -1,0 +1,17 @@
+services:
+  nginx:
+    container_name: lg-nginx-stage
+    volumes:
+      - ./tests/.runtime/nginx.conf:/etc/nginx/nginx.conf:ro
+  php-fpm:
+    container_name: lg-php-stage
+    volumes:
+      - ./tests/.runtime/php.conf:/usr/local/etc/php-fpm.d/zz-lg.conf:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'cgi-fcgi -bind -connect localhost:9001 >/dev/null 2>&1 || exit 1']
+  speed-backend:
+    container_name: lg-speed-backend-stage
+    environment:
+      HTTP_PORT: '19081'
+      UTILITIES_IPERF3_PORT_MIN: '5221'
+      UTILITIES_IPERF3_PORT_MAX: '5230'

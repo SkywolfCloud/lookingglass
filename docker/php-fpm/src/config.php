@@ -97,7 +97,7 @@ define('LG_METHODS', parseEnvList('METHODS', [
 define('LG_LOCATIONS', parseEnvMap('LOCATIONS', []));
 
 // Enable the iPerf info inside the speedtest block, set to false to disable;
-const LG_SPEEDTEST_IPERF = true;
+const LG_SPEEDTEST_IPERF = false;
 // Define the label of an incoming iPerf test;
 const LG_SPEEDTEST_LABEL_INCOMING = 'iPerf3 Incoming';
 // Define the command to use to test incoming speed using iPerf, preferable iPerf3;

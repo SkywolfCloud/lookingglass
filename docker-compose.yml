@@ -7,6 +7,9 @@ services:
       dockerfile: docker/nginx/Dockerfile
     network_mode: host
     restart: unless-stopped
+    depends_on:
+      speed-backend:
+        condition: service_healthy
 
   php-fpm:
     image: skywolfcloud/lookingglass-php:local
@@ -48,6 +51,34 @@ services:
       # LOCATIONS: "Amsterdam|https://ams.lg.example.com,Frankfurt|https://fra.lg.example.com"
       # Comma-separated "Label|URL" pairs for speedtest files (default: none).
       # SPEEDTEST_FILES: "100MB|https://example.com/100mb.bin,1GB|https://example.com/1gb.bin"
+
+  speed-backend:
+    image: wikihostinc/looking-glass-server@sha256:a04ad6948c7246497490d2ce724b0488a30454e1b63c64c7d8406b85a4ed9892
+    container_name: lg-speed-backend
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      LISTEN_IP: '127.0.0.1'
+      HTTP_PORT: '19080'
+      LOCATION: Location
+      PUBLIC_IPV4: '127.0.0.1'
+      PUBLIC_IPV6: '::1'
+      SPEEDTEST_FILE_LIST: '1MB 10MB 100MB 1GB'
+      ENABLE_SPEEDTEST: 'true'
+      DISPLAY_TRAFFIC: 'true'
+      UTILITIES_SPEEDTESTDOTNET: 'true'
+      UTILITIES_IPERF3: 'true'
+      UTILITIES_IPERF3_PORT_MIN: '5201'
+      UTILITIES_IPERF3_PORT_MAX: '5210'
+      UTILITIES_PING: 'false'
+      UTILITIES_FAKESHELL: 'false'
+      UTILITIES_MTR: 'false'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:$${HTTP_PORT:-19080}/ || exit 1']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
 
   # iperf3:
   #   image: networkstatic/iperf3:latest
